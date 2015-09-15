@@ -23,5 +23,5 @@ if (( ${INSTALL_JDK_DEVEL} )); then
 #  install_application "openjdk-7-jdk" "java-1.7.0-openjdk-devel"
 else
   echo 'Installing minimal JRE'
-$  install_application "openjdk-7-jre-headless" "java-1.7.0-openjdk"
+#  install_application "openjdk-7-jre-headless" "java-1.7.0-openjdk"
 fi
