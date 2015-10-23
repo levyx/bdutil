@@ -240,7 +240,8 @@ HDFS_DATA_DIRS_PERM='755'
 MASTER_UI_PORTS=('50030' '50070')
 
 # If true, install JDK with compiler/tools in addition to just the JRE.
-INSTALL_JDK_DEVEL=false
+#INSTALL_JDK_DEVEL=false
+INSTALL_JDK_DEVEL=true
 
 ###############################################################################
 
