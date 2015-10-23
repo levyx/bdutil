@@ -69,5 +69,7 @@ gsutil cp gs://levyx-opt/scala-2.11.2.tgz .
 tar xzf scala-2.11.2.tgz -C /opt
 
 # Modify /etc/sudouers 
-sed -i 's/Defaults requiretty/#Defaults requiretty/' /etc/sudoers
-sed -i 's/Defaults !visiblepw/#Defaults !visiblepw/' /etc/sudoers
+chmod +w /etc/sudoers
+sed -i 's/Defaults\s\+requiretty/#Defaults requiretty/' /etc/sudoers
+sed -i 's/Defaults\s\+!visiblepw/#Defaults !visiblepw/' /etc/sudoers
+chmod -w /etc/sudoers
