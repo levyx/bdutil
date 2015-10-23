@@ -20,8 +20,12 @@
 
 if (( ${INSTALL_JDK_DEVEL} )); then
   echo 'Installing JDK with compiler and tools'
+  gsutil cp gs://levyx-share/jdk-8u25-linux-x64.rpm .
 #  install_application "openjdk-7-jdk" "java-1.7.0-openjdk-devel"
+  yum install -y ./jdk-8u25-linux-x64.rpm
 else
   echo 'Installing minimal JRE'
+  gsutil cp gs://levyx-share/jre-8u25-linux-x64.rpm .
 #  install_application "openjdk-7-jre-headless" "java-1.7.0-openjdk"
+  yum install -y jre-8u25-linux-x64.rpm 
 fi
