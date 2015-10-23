@@ -7,7 +7,7 @@
 
 yum -y install epel-release
 yum -y install tree vim wget sysstat mdadm lsof screen wget psmisc net-tools nmap-ncat collectd git
-#yum -y install gcc zlib-devel 
+yum -y install gcc zlib-devel 
 #yum -y install maven emacs nginx
 
 setenforce permissive
