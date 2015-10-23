@@ -61,11 +61,11 @@ sed -i 's/ClientAliveInterval 420/ClientAliveInterval 0/' /etc/ssh/sshd_config
 systemctl restart sshd
 
 # Install sbt
-gsutil cp gs://levyx-opt/sbt-0.13.0.rpm .
+/usr/local/bin/gsutil cp gs://levyx-opt/sbt-0.13.0.rpm .
 yum install -y ./sbt-0.13.0.rpm
 
 # Install scala
-gsutil cp gs://levyx-opt/scala-2.11.2.tgz .
+/usr/local/bin/gsutil cp gs://levyx-opt/scala-2.11.2.tgz .
 tar xzf scala-2.11.2.tgz -C /opt
 
 # Modify /etc/sudouers 
