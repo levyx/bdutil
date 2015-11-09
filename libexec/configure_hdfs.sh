@@ -26,7 +26,8 @@ if (( ${ENABLE_HDFS} )); then
   export HDFS_NAME_DIR=/hadoop/dfs/name
 
   # If disks are mounted use all of them for HDFS data
-  MOUNTED_DISKS=($(find /mnt -maxdepth 1 -mindepth 1))
+  # If disks are mounted use only persistent onesf for HDFS data
+  MOUNTED_DISKS=($(find /mnt/pd* -maxdepth 1 -mindepth 1))
   if [[ ${#MOUNTED_DISKS[@]} -eq 0 ]]; then
     MOUNTED_DISKS=('')
   fi

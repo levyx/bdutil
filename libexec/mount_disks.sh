@@ -52,6 +52,7 @@ for DISK_PATH in ${DISK_PATHS}; do
   echo "Mounting '${DISK_ID}' under mount point '${DATAMOUNT}'..."
   MOUNT_TOOL=/usr/share/google/safe_format_and_mount
   ${MOUNT_TOOL} -m 'mkfs.ext4 -F' ${DISK_ID} ${DATAMOUNT}
+#  ${MOUNT_TOOL} -m 'mkfs.xfs ' ${DISK_ID} ${DATAMOUNT}
 
   # Idempotently update /etc/fstab
   if cut -d '#' -f 1 /etc/fstab | grep -qvw ${DATAMOUNT}; then
@@ -65,8 +66,16 @@ for DISK_PATH in ${DISK_PATHS}; do
 done
 
 # If disks are mounted use the first one to hold target of symlink /hadoop
+# If disks are mounted use the first PERSISTENT one to hold target of symlink /hadoop
 if (( ${#MOUNTED_DISKS[@]} )); then
-  MOUNTED_HADOOP_DIR=${MOUNTED_DISKS[0]}/hadoop
+  for (( i=0; i<${#MOUNTED_DISKS[@]} ; i++ ))
+  do
+    if [[ ${MOUNTED_DISKS[$i]} == /mnt/pd* ]]
+    then
+      break
+    fi
+  done
+  MOUNTED_HADOOP_DIR=${MOUNTED_DISKS[$i]}/hadoop
   mkdir -p ${MOUNTED_HADOOP_DIR}
   if [[ ! -d /hadoop ]]; then
     ln -s ${MOUNTED_HADOOP_DIR} /hadoop

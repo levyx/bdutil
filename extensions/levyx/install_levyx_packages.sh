@@ -6,12 +6,15 @@
 #gcloud components update
 
 yum -y install epel-release
-yum -y install tree vim wget sysstat mdadm lsof screen wget psmisc net-tools nmap-ncat collectd git
+yum -y install tree vim wget sysstat mdadm lsof screen wget psmisc net-tools nmap-ncat collectd git dstat
+
 # Needed for compiling 
-yum -y install gcc zlib-devel zip unzip flex bycc
+yum -y install gcc zlib-devel zip unzip flex byacc
 #yum -y install maven emacs nginx
 
-setenforce permissive
+# Set time display to America/Los_Angeles
+echo "export TZ=America/Los_Angeles" >> /etc/bashrc
+
 cat << HEREDOC1 > /etc/collectd.conf
 FQDNLookup   false
 LoadPlugin syslog
@@ -49,6 +52,7 @@ LoadPlugin write_graphite
 </Plugin>
 HEREDOC1
 
+setenforce permissive
 cat << HEREDOC2 > /etc/selinux/config
 SELINUX=permissive
 SELINUXTYPE=targeted
