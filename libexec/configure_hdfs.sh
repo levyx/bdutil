@@ -61,7 +61,7 @@ HADOOP_SECONDARYNAMENODE_OPTS="-Xmx${SECONDARYNAMENODE_MEM_MB}m \${HADOOP_SECOND
 EOF
 
   # Increase maximum number of files for HDFS
-  MAX_FILES=16384
+  MAX_FILES=65535
   ulimit -n ${MAX_FILES}
   cat << EOF > /etc/security/limits.d/hadoop.conf
 ${HDFS_ADMIN} hard nofile ${MAX_FILES}
