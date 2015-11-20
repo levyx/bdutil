@@ -1,4 +1,4 @@
-# Copyright 2014 Google Inc. All Rights Reserved.
+
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -60,7 +60,7 @@ PREFIX='hadoop'
 NUM_WORKERS=2
 
 # If true, tries to attach the PDs listed in WORKER_ATTACHED_PDS and
-# MASTER_ATTACHED_PD to their respective VMs as a non-boot volume. By default,
+# MASTER_ATTACHED_PDS to their respective VMs as a non-boot volume. By default,
 # the PDS will be named after the instance names with a "-pd" suffix.
 USE_ATTACHED_PDS=${USE_ATTACHED_PDS:-false}
 
@@ -81,7 +81,7 @@ WORKER_ATTACHED_PDS_SIZE_GB=500
 # Only applicable during deployment if USE_ATTACHED_PDS is true and
 # CREATE_ATTACHED_PDS_ON_DEPLOY is true. Specifies the size, in GB, of
 # the non-boot PD to create for the master node.
-MASTER_ATTACHED_PD_SIZE_GB=500
+MASTER_ATTACHED_PDS_SIZE_GB=500
 
 # Only applicable during deployment if USE_ATTACHED_PDS is true and
 # CREATE_ATTACHED_PDS_ON_DEPLOY is true. Specifies the disk type,
@@ -91,7 +91,7 @@ WORKER_ATTACHED_PDS_TYPE='pd-standard'
 # Only applicable during deployment if USE_ATTACHED_PDS is true and
 # CREATE_ATTACHED_PDS_ON_DEPLOY is true. Specifies the disk type,
 # either 'pd-standard' or 'pd-ssd', to create for the master node.
-MASTER_ATTACHED_PD_TYPE='pd-standard'
+MASTER_ATTACHED_PDS_TYPE='pd-standard'
 
 # The size of the master boot disk.
 MASTER_BOOT_DISK_SIZE_GB=
@@ -348,15 +348,22 @@ function evaluate_late_variable_bindings() {
   # The instance name of the VM which serves as both the namenode and
   # jobtracker.
   MASTER_HOSTNAME="${PREFIX}-${master_suffix}"
+  # List of expanded master-node PD name. Only applicable if USE_ATTACHED_PDS
+  # is true.
+  set +x
+  # Generate worker PD names based on the worker instance names.
+  for ((i = 0; i < MASTER_ATTACHED_PDS_COUNT; i++)); do
+      MASTER_ATTACHED_PDS[${i}]="${MASTER_HOSTNAME}-pd-$i"
+  done
 
   # Generate worker PD names based on the worker instance names.
   for ((i = 0; i < NUM_WORKERS; i++)); do
-    WORKER_ATTACHED_PDS[${i}]="${WORKERS[${i}]}-pd"
+    for ((j = 0; j < WORKER_ATTACHED_PDS_COUNT; j++)); do
+      k=$(( i * WORKER_ATTACHED_PDS_COUNT + j ))
+      WORKER_ATTACHED_PDS[${k}]="${WORKERS[${i}]}-pd-$j"
+    done
   done
-
-  # List of expanded master-node PD name. Only applicable if USE_ATTACHED_PDS
-  # is true.
-  MASTER_ATTACHED_PD="${MASTER_HOSTNAME}-pd"
+  set -x
 
   # Fully qualified HDFS URI of namenode
   NAMENODE_URI="hdfs://${MASTER_HOSTNAME}:8020/"

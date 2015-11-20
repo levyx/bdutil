@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 #
 # Copyright 2013 Google Inc. All Rights Reserved.
 #
@@ -85,6 +85,9 @@ Flags:
     CREATE_ATTACHED_PDS_ON_DEPLOY is true. Specifies the disk type,
     either 'pd-standard' or 'pd-ssd', to create for the master node.
 
+  --master_attached_pds_count
+    Number of devices to attach to each worker node, in range [0, 4].
+
   --master_local_ssd_count
     Number of local SSD devices to attach to the master node, in range [0, 4].
 
@@ -128,6 +131,9 @@ Flags:
     Only applicable during deployment if USE_ATTACHED_PDS is true and
     CREATE_ATTACHED_PDS_ON_DEPLOY is true. Specifies the disk type,
     either 'pd-standard' or 'pd-ssd', to create for the worker nodes.
+
+  --worker_attached_pds_count
+    Number of devices to attach to each worker node, in range [0, 4].
 
   --worker_local_ssd_count
     Number of local SSD devices to attach to each worker node, in range [0, 4].
@@ -345,10 +351,13 @@ function prompt_confirmation() {
       MASTER_HOSTNAME='${MASTER_HOSTNAME}'
       WORKERS='${WORKERS[@]}'
       BDUTIL_GCS_STAGING_DIR='${BDUTIL_GCS_STAGING_DIR}'
+      foo=foo
       "
   if (( ${USE_ATTACHED_PDS} )); then
     msg+="\
-      MASTER_ATTACHED_PD='${MASTER_ATTACHED_PD}'
+      who=who
+     
+      MASTER_ATTACHED_PDS='${MASTER_ATTACHED_PDS}'
       WORKER_ATTACHED_PDS='${WORKER_ATTACHED_PDS[@]}'
       "
   fi
@@ -507,14 +516,14 @@ function run_sanity_checks() {
 
   # Check for disk names being defined if USE_ATTACHED_PDS is true.
   if (( ${USE_ATTACHED_PDS} )); then
-    if (( ${#WORKER_ATTACHED_PDS[@]} != ${NUM_WORKERS?} )); then
+    if (( ${#WORKER_ATTACHED_PDS[@]} != $(( NUM_WORKERS * WORKER_ATTACHED_PDS_COUNT )) )); then
       local actual=${#WORKER_ATTACHED_PDS[@]}
       local varname='WORKER_ATTACHED_PDS'
       logerror "${varname} has ${actual} elements, expected ${NUM_WORKERS}"
       print_help
     fi
-    if [[ -z "${MASTER_ATTACHED_PD}" ]]; then
-      logerror 'MASTER_ATTACHED_PD must be defined since USE_ATTACHED_PDS==1.'
+    if [[ -z "${MASTER_ATTACHED_PDS}" ]]; then
+      logerror 'MASTER_ATTACHED_PDS must be defined since USE_ATTACHED_PDS==1.'
       print_help
     fi
   fi
@@ -616,10 +625,10 @@ function run_sanity_checks() {
         >> ${OVERRIDES_FILE}
   fi
 
-  if [[ -z "${MASTER_ATTACHED_PD_TYPE}" ]]; then
-    loginfo 'No MASTER_ATTACHED_PD_TYPE provided; defaulting to pd-standard.'
-    MASTER_ATTACHED_PD_TYPE='pd-standard'
-    echo "MASTER_ATTACHED_PD_TYPE=${MASTER_ATTACHED_PD_TYPE}" \
+  if [[ -z "${MASTER_ATTACHED_PDS_TYPE}" ]]; then
+    loginfo 'No MASTER_ATTACHED_PDS_TYPE provided; defaulting to pd-standard.'
+    MASTER_ATTACHED_PDS_TYPE='pd-standard'
+    echo "MASTER_ATTACHED_PDS_TYPE=${MASTER_ATTACHED_PDS_TYPE}" \
         >> ${OVERRIDES_FILE}
   fi
 
@@ -758,6 +767,7 @@ function wait_for_ssh() {
 function create_cluster() {
   trap handle_error ERR
   # Optionally create the disks to be attached to the VMs.
+#  set -x
   if (( ${USE_ATTACHED_PDS} && ${CREATE_ATTACHED_PDS_ON_DEPLOY} )); then
     if ! is_single_node_setup; then
       loginfo "Creating attached worker disks: ${WORKER_ATTACHED_PDS[@]}"
@@ -766,24 +776,30 @@ function create_cluster() {
           await_async_jobs 'disks create (partial)'
           loginfo 'Done. Invoking next batch...'
         fi
-        DISK=${WORKER_ATTACHED_PDS[${i}]}
+        for ((j=0; j < WORKER_ATTACHED_PDS_COUNT; j++)); do
+          k=$(( i * WORKER_ATTACHED_PDS_COUNT + j ))
+          DISK=${WORKER_ATTACHED_PDS[${k}]}
+          run_gcloud_compute_cmd \
+            disks create \
+              --size=${WORKER_ATTACHED_PDS_SIZE_GB} \
+              --type=${WORKER_ATTACHED_PDS_TYPE} \
+              ${DISK} &
+          sleep_for_api_ops
+        done
+      done
+    fi
+    if ! (( ${SKIP_MASTER} )); then
+      loginfo "Creating attached master disk: ${MASTER_ATTACHED_PD[@]}"
+      for ((i=0; i < MASTER_ATTACHED_PDS_COUNT; i++)); do
+        DISK=${MASTER_ATTACHED_PDS[${i}]}
         run_gcloud_compute_cmd \
           disks create \
-            --size=${WORKER_ATTACHED_PDS_SIZE_GB} \
-            --type=${WORKER_ATTACHED_PDS_TYPE} \
+            --size=${MASTER_ATTACHED_PDS_SIZE_GB} \
+            --type=${MASTER_ATTACHED_PDS_TYPE} \
             ${DISK} &
         sleep_for_api_ops
       done
-    fi
-
-    if ! (( ${SKIP_MASTER} )); then
-      loginfo "Creating attached master disk: ${MASTER_ATTACHED_PD}"
-      run_gcloud_compute_cmd \
-          disks create \
-          --size=${MASTER_ATTACHED_PD_SIZE_GB} \
-          --type=${MASTER_ATTACHED_PD_TYPE} \
-          ${MASTER_ATTACHED_PD} &
-      loginfo 'Done creating disks!'
+      loginfo 'Done creating MASTER attached disks!'
     else
       loginfo 'Skipping master-disk creation because SKIP_MASTER is true.'
     fi
@@ -802,9 +818,13 @@ function create_cluster() {
         await_async_jobs 'instances create (partial)'
         loginfo 'Done. Invoking next batch...'
       fi
+      set -x
       local optional_disk_arg=''
       if (( ${USE_ATTACHED_PDS} )); then
-        optional_disk_arg+="--disk name=${WORKER_ATTACHED_PDS[${i}]} mode=rw "
+        for ((j=0; j < WORKER_ATTACHED_PDS_COUNT; j++)); do
+          k=$(( i * WORKER_ATTACHED_PDS_COUNT + j ))
+          optional_disk_arg+="--disk name=${WORKER_ATTACHED_PDS[${k}]} mode=rw "
+        done
       fi
       if (( WORKER_BOOT_DISK_SIZE_GB > 0 )); then
         optional_disk_arg+="--boot-disk-size=${WORKER_BOOT_DISK_SIZE_GB} "
@@ -831,13 +851,16 @@ function create_cluster() {
           --boot-disk-type=pd-standard \
           ${optional_disk_arg} &
       sleep_for_api_ops
+      set +x
     done
   fi
   if ! (( ${SKIP_MASTER} )); then
     loginfo "Creating master instance: ${MASTER_HOSTNAME}"
     local optional_disk_arg=''
     if (( ${USE_ATTACHED_PDS} )); then
-      optional_disk_arg+="--disk name=${MASTER_ATTACHED_PD} mode=rw "
+      for ((j=0; j < MASTER_ATTACHED_PDS_COUNT; j++)); do
+        optional_disk_arg+="--disk name=${MASTER_ATTACHED_PDS[${j}]} mode=rw "
+      done
     fi
     if (( MASTER_BOOT_DISK_SIZE_GB > 0 )); then
       optional_disk_arg+="--boot-disk-size=${MASTER_BOOT_DISK_SIZE_GB} "
@@ -859,6 +882,7 @@ function create_cluster() {
   else
     loginfo 'Skipping master creation because SKIP_MASTER is true.'
   fi
+#  set +x
   await_async_jobs 'instances create'
 
   loginfo 'Instances all created. Entering polling loop to wait for ssh-ability'
@@ -929,8 +953,8 @@ function delete_cluster() {
       done
     fi
     if ! (( ${SKIP_MASTER} )); then
-      loginfo "Deleting attached master disk: ${MASTER_ATTACHED_PD}"
-      run_gcloud_compute_cmd disks delete ${MASTER_ATTACHED_PD} &
+      loginfo "Deleting attached master disk: ${MASTER_ATTACHED_PDS[@]}"
+      run_gcloud_compute_cmd disks delete ${MASTER_ATTACHED_PDS[@]} &
     else
       loginfo 'Skipping master-disk deletion because SKIP_MASTER is true.'
     fi
@@ -1503,12 +1527,12 @@ function parse_input() {
         ;;
       --master_attached_pd_size_gb)
         validate_argument $1 $2
-        echo "MASTER_ATTACHED_PD_SIZE_GB=$2" >> ${OVERRIDES_FILE}
+        echo "MASTER_ATTACHED_PDS_SIZE_GB=$2" >> ${OVERRIDES_FILE}
         shift 2
         ;;
       --master_attached_pd_type)
         validate_argument $1 $2
-        echo "MASTER_ATTACHED_PD_TYPE=$2" >> ${OVERRIDES_FILE}
+        echo "MASTER_ATTACHED_PDS_TYPE=$2" >> ${OVERRIDES_FILE}
         shift 2
         ;;
       --master_boot_disk_size_gb)
@@ -1516,6 +1540,13 @@ function parse_input() {
         echo "MASTER_BOOT_DISK_SIZE_GB=$2" >> ${OVERRIDES_FILE}
         shift 2
         ;;
+
+      --master_attached_pds_count)
+        validate_argument $1 $2
+        echo "MASTER_ATTACHED_PDS_COUNT=$2" >> ${OVERRIDES_FILE}
+        shift 2
+        ;;
+ 
       --master_local_ssd_count)
         validate_argument $1 $2
         echo "MASTER_LOCAL_SSD_COUNT=$2" >> ${OVERRIDES_FILE}
@@ -1586,6 +1617,13 @@ function parse_input() {
         echo "WORKER_ATTACHED_PDS_TYPE=$2" >> ${OVERRIDES_FILE}
         shift 2
         ;;
+
+      --worker_attached_pds_count)
+        validate_argument $1 $2
+        echo "WORKER_ATTACHED_PDS_COUNT=$2" >> ${OVERRIDES_FILE}
+        shift 2
+        ;;
+ 
       --worker_local_ssd_count)
         validate_argument $1 $2
         echo "WORKER_LOCAL_SSD_COUNT=$2" >> ${OVERRIDES_FILE}
