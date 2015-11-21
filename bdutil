@@ -357,7 +357,7 @@ function prompt_confirmation() {
     msg+="\
       who=who
      
-      MASTER_ATTACHED_PDS='${MASTER_ATTACHED_PDS}'
+      MASTER_ATTACHED_PDS='${MASTER_ATTACHED_PDS[@]}'
       WORKER_ATTACHED_PDS='${WORKER_ATTACHED_PDS[@]}'
       "
   fi
@@ -943,18 +943,26 @@ function delete_cluster() {
     if ! is_single_node_setup; then
       loginfo "Deleting attached worker disks: ${WORKER_ATTACHED_PDS[@]}"
       for ((i=0; i < NUM_WORKERS; i++)); do
-        if (( ${i} > 0 && ${i} % ${MAX_CONCURRENT_ASYNC_PROCESSES} == 0 )); then
-          await_async_jobs 'disks delete (partial)'
-          loginfo 'Done. Invoking next batch...'
-        fi
-        DISK=${WORKER_ATTACHED_PDS[${i}]}
-        run_gcloud_compute_cmd disks delete ${DISK} &
-        sleep_for_api_ops
+        for ((j=0; j < WORKER_ATTACHED_PDS_COUNT; j++)); do
+          k=$(( i * WORKER_ATTACHED_PDS_COUNT + j ))
+          if (( ${k} > 0 && ${k} % ${MAX_CONCURRENT_ASYNC_PROCESSES} == 0 )); then
+            await_async_jobs 'disks delete (partial)'
+            loginfo 'Done. Invoking next batch...'
+          fi
+          DISK=${WORKER_ATTACHED_PDS[${k}]}
+          run_gcloud_compute_cmd disks delete ${DISK} &
+          sleep_for_api_ops
+        done
       done
     fi
+
     if ! (( ${SKIP_MASTER} )); then
       loginfo "Deleting attached master disk: ${MASTER_ATTACHED_PDS[@]}"
-      run_gcloud_compute_cmd disks delete ${MASTER_ATTACHED_PDS[@]} &
+
+      for ((i=0; i < MASTER_ATTACHED_PDS_COUNT; i++)); do
+        DISK=${MASTER_ATTACHED_PDS[${i}]}
+        run_gcloud_compute_cmd disks delete ${DISK} &
+      done 
     else
       loginfo 'Skipping master-disk deletion because SKIP_MASTER is true.'
     fi
