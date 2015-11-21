@@ -27,7 +27,7 @@ if (( ${ENABLE_HDFS} )); then
 
   # If disks are mounted use all of them for HDFS data
   # If disks are mounted use only persistent onesf for HDFS data
-  MOUNTED_DISKS=($(find /mnt/pd* -maxdepth 1 -mindepth 1))
+  MOUNTED_DISKS=($(find /mnt/pd* -maxdepth 0  -mindepth 0))
   if [[ ${#MOUNTED_DISKS[@]} -eq 0 ]]; then
     MOUNTED_DISKS=('')
   fi
