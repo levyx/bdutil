@@ -552,6 +552,8 @@ function run_sanity_checks() {
 
   # Make sure preemptible is only used with gs
   local gt0=$(echo | awk -v x=${PREEMPTIBLE_FRACTION} '{print (x > 0) ? 1 : 0}')
+  # Disable this check
+  gt0=0
   if [[ "${DEFAULT_FS}" != 'gs' ]]; then
     if [[ "$gt0" -eq 1 ]]; then
       logerror 'Preemptible VMs can only be used with GCS as the DEFAULT_FS.'
