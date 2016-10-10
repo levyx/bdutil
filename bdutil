@@ -20,7 +20,7 @@
 #
 # Usage: ./bdutil [deploy|delete] [optional: <paths to env files>]...
 
-BDUTIL_VERSION='1.3.2'
+BDUTIL_VERSION='1.3.5-SNAPSHOT'
 
 # Prints the usage for this script and exits.
 function print_usage() {
@@ -345,6 +345,7 @@ function prompt_confirmation() {
       GCE_IMAGE='${GCE_IMAGE?}'
       GCE_ZONE='${GCE_ZONE?}'
       GCE_NETWORK='${GCE_NETWORK?}'
+      GCE_TAGS='${GCE_TAGS?}'
       PREEMPTIBLE_FRACTION=${PREEMPTIBLE_FRACTION?}
       PREFIX='${PREFIX?}'
       NUM_WORKERS=${NUM_WORKERS?}
@@ -825,7 +826,7 @@ function create_cluster() {
       if (( ${USE_ATTACHED_PDS} )); then
         for ((j=0; j < WORKER_ATTACHED_PDS_COUNT; j++)); do
           k=$(( i * WORKER_ATTACHED_PDS_COUNT + j ))
-          optional_disk_arg+="--disk name=${WORKER_ATTACHED_PDS[${k}]} mode=rw "
+          optional_disk_arg+="--disk name=${WORKER_ATTACHED_PDS[${i}]},mode=rw "
         done
       fi
       if (( WORKER_BOOT_DISK_SIZE_GB > 0 )); then
@@ -849,7 +850,8 @@ function create_cluster() {
           ${optional_preemptible_arg} \
           --image=${GCE_IMAGE} \
           --network=${GCE_NETWORK} \
-          --scopes ${GCE_SERVICE_ACCOUNT_SCOPES[@]//,/ } \
+          --tags=${GCE_TAGS} \
+          --scopes $(export IFS=,; echo "${GCE_SERVICE_ACCOUNT_SCOPES[*]}";) \
           --boot-disk-type=pd-standard \
           ${optional_disk_arg} &
       sleep_for_api_ops
@@ -861,7 +863,7 @@ function create_cluster() {
     local optional_disk_arg=''
     if (( ${USE_ATTACHED_PDS} )); then
       for ((j=0; j < MASTER_ATTACHED_PDS_COUNT; j++)); do
-        optional_disk_arg+="--disk name=${MASTER_ATTACHED_PDS[${j}]} mode=rw "
+        optional_disk_arg+="--disk name=${MASTER_ATTACHED_PD},mode=rw "
       done
     fi
     if (( MASTER_BOOT_DISK_SIZE_GB > 0 )); then
@@ -878,7 +880,8 @@ function create_cluster() {
         --machine-type=${GCE_MASTER_MACHINE_TYPE} \
         --image=${GCE_IMAGE} \
         --network=${GCE_NETWORK} \
-        --scopes ${GCE_SERVICE_ACCOUNT_SCOPES[@]//,/ } \
+        --tags=${GCE_TAGS} \
+        --scopes $(export IFS=,; echo "${GCE_SERVICE_ACCOUNT_SCOPES[*]}";) \
         --boot-disk-type=pd-standard \
         ${optional_disk_arg} &
   else
@@ -1565,6 +1568,11 @@ function parse_input() {
       --network)
         validate_argument $1 $2
         echo "GCE_NETWORK=$2" >> ${OVERRIDES_FILE}
+        shift 2
+        ;;
+      --tags)
+        validate_argument $1 $2
+        echo "GCE_TAGS=$2" >> ${OVERRIDES_FILE}
         shift 2
         ;;
       -n|--num_workers)

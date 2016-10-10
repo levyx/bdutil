@@ -77,6 +77,12 @@ function run_with_retries() {
   fi
 }
 
+# Curl a URL from metadata with appropriate V1 headers.
+function curl_v1_metadata() {
+  local url=$1
+  curl "$url" -H Metadata-Flavor:Google
+}
+
 # Attempts to curl a passed file 3 times, waiting one second between each try.
 # If all curls fail, it allows the error to percolate.
 function curl_with_retry() {
@@ -115,14 +121,52 @@ function download_bd_resource() {
   fi
 }
 
+
+# Run apt-get, checking for warnings on STDOUT / STDERR. Warnings are
+# defined as lines starting with "W:".
+#
+# Arguments:
+#   $@ arguments to apt-get
+#
+# Return:
+#   0 if apt-get completed without errors or warnings, non-zero otherwise.
+#
+function apt_get_with_warn_check() {
+  APT_GET_OUT="$(mktemp)"
+  if ! ( set -o pipefail; apt-get "$@" 2>&1 | tee "${APT_GET_OUT}" ); then
+    # apt-get or tee failed.
+    return 1
+  else
+    # Check APT_GET_OUT for warnings and errors. If any lines start with W: or
+    # E: then error out.
+    if grep -e '^[WE]:' "${APT_GET_OUT}"; then
+      return 1
+    fi
+  fi
+
+  # No warnings found, remove our temp file.
+  rm "${APT_GET_OUT}"
+
+  # Apt-get returned OK, no warnings or errors found in output.
+  return 0
+}
+
+# Sentinel file that is written when apt-get update completes succesfully.
 readonly APT_SENTINEL='apt.lastupdate'
 
+# Perform an apt-get update, with retries.
+#
+# Arguments:
+#    None
+# Returns:
+#    zero on success, non-zero on failure.
+#
 function update_apt_get() {
   local update_succeeded=0
   local sleep_time=${BDUTIL_POLL_INTERVAL_SECONDS}
-  local max_attempts=5
+  local max_attempts=30
   for ((i = 1; i <= ${max_attempts}; i++)); do
-    if apt-get -y -qq update; then
+    if apt_get_with_warn_check -y -qq update; then
       update_succeeded=1
       break
     else
@@ -134,7 +178,7 @@ function update_apt_get() {
   if ! (( ${update_succeeded} )); then
     echo 'Final attempt to apt-get update...'
     # Let any final error propagate all the way out to any error traps.
-    apt-get -y -qq update
+    apt_get_with_warn_check -y -qq update
   fi
   touch "${APT_SENTINEL}"
 }
@@ -300,6 +344,7 @@ function setup_gcs_admin() {
     useradd --system --shell /usr/sbin/nologin -M \
         --home /home/${GCS_ADMIN} --user-group ${GCS_ADMIN}
     chown -R ${GCS_ADMIN}:${GCS_ADMIN} /home/${GCS_ADMIN}
+    usermod -a -G hadoop ${GCS_ADMIN}
   fi
 }
 
@@ -315,16 +360,15 @@ function make_cache_cleaner_script() {
   cat <<EOF
 #!/usr/bin/env bash
 
-export HADOOP_LOGFILE='gcs-cache-cleaner.log'
-export HADOOP_ROOT_LOGGER='${GCS_CACHE_CLEANER_LOGGER}'
-
-${HADOOP_INSTALL_DIR}/bin/hadoop ${gc_cleaner} > \
-    ${GCS_CACHE_CLEANER_LOG_DIRECTORY}/gcs-cache-cleaner.out
+# Use timeout to avoid overlapping cron jobs in case one goes long.
+timeout 1790 find /export/hadoop_gcs_connector_metadata_cache/ \
+    -mindepth 1 -mmin +240 -exec rm -df {} \; \
+    &> ${GCS_CACHE_CLEANER_LOG_DIRECTORY}/gcs-cache-cleaner.out
 EOF
 }
 
 # Given full path to a cache-cleaner script as $1, prints the crontab entry
-# for running it as user ${GCS_CACHE_CLEANER_USER} twice an hour; caller can
+# for running it as user ${GCS_ADMIN} twice an hour; caller can
 # append the printed contents into an actual crontab to activate it as needed.
 function make_cleaner_crontab() {
   local cleaner=$1
@@ -332,7 +376,7 @@ function make_cleaner_crontab() {
   cat <<EOF
 # Run the ${cleaner} script twice every hour at 7 and 37 minutes past the hour
 # m h dom mon dow user command
-7,37 * * * * ${GCS_CACHE_CLEANER_USER} ${cleaner}
+7,37 * * * * ${GCS_ADMIN} ${cleaner}
 EOF
 }
 
@@ -390,4 +434,12 @@ function is_single_node_setup() {
   else
     false
   fi
+}
+
+# Version comparitor. Requires sort -V.
+# version_at_least 1.2.X 1.2 -> True
+# version_at_least 1.2 1.2 -> True
+# version_at_least 1.2 1.2.0 -> False
+function version_at_least {
+  [[ "$2" == "$(echo -e "$1\n$2" | sort -V | head -1)" ]]
 }

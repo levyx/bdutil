@@ -35,7 +35,7 @@ PROJECT=""
 # example, to whitelist intra-cluster SSH using the cluster prefix.
 
 # GCE settings.
-GCE_IMAGE='debian-7-backports'
+GCE_IMAGE='https://www.googleapis.com/compute/v1/projects/debian-cloud/global/images/backports-debian-7-wheezy-v20160531'
 GCE_MACHINE_TYPE='n1-standard-4'
 GCE_ZONE=""
 # When setting a network it's important for all nodes be able to communicate
@@ -47,6 +47,11 @@ GCE_NETWORK='default'
 # worker nodes. If empty, defaults to using the same machine type as workers
 # specified in GCE_MACHINE_TYPE.
 GCE_MASTER_MACHINE_TYPE=''
+
+# Specifies a comma-separated list of tags to apply to the instances for
+# identifying the instances to which network firewall rules will apply.
+# Cannot be empty, so the default is 'bdutil'.
+GCE_TAGS='bdutil'
 
 # If non-zero, specifies the fraction (between 0.0 and 1.0) of worker
 # nodes that should be run as preemptible VMs.
@@ -168,11 +173,6 @@ GCS_CACHE_MASTER_HOSTNAME=''
 # and potentially other gcs-connector-related tasks.
 GCS_ADMIN='gcsadmin'
 
-# The user on whose behalf to run the GCS cache cleaner; not equal to GCS_ADMIN
-# since the user running the cache cleaner should have "Hadoop admin"
-# privileges.
-GCS_CACHE_CLEANER_USER='hadoop'
-
 # Directory in which to place logs produced by running the GCS cache cleaner;
 # only applicable when ENABLE_NFS_GCS_FILE_CACHE is true. This is more
 # descriptive and prescriptive; it must match the HADOOP_LOG_DIR placed inside
@@ -199,10 +199,10 @@ CORES_PER_REDUCE_TASK=1.0
 JAVAOPTS='-Xms1024m -Xmx2048m'
 
 # Complete URL for downloading the GCS Connector JAR file.
-GCS_CONNECTOR_JAR='https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-1.4.2-hadoop1.jar'
+GCS_CONNECTOR_JAR='https://storage.googleapis.com/hadoop-lib/gcs/gcs-connector-1.5.3-hadoop1.jar'
 
 # Complete URL for downloading the BigQuery Connector JAR file.
-BIGQUERY_CONNECTOR_JAR='https://storage.googleapis.com/hadoop-lib/bigquery/bigquery-connector-0.7.2-hadoop1.jar'
+BIGQUERY_CONNECTOR_JAR='https://storage.googleapis.com/hadoop-lib/bigquery/bigquery-connector-0.7.9-hadoop1.jar'
 
 # Complete URL for downloading the configuration script.
 BDCONFIG='https://storage.googleapis.com/hadoop-tools/bdconfig/bdconfig-0.28.1.tar.gz'
