@@ -26,18 +26,16 @@ if (( ${ENABLE_HDFS} )); then
   export HDFS_NAME_DIR=/hadoop/dfs/name
 
   # If disks are mounted use all of them for HDFS data
-  # If disks are mounted use only persistent onesf for HDFS data
-  MOUNTED_DISKS=($(find /mnt/pd* -maxdepth 0  -mindepth 0))
+  MOUNTED_DISKS=($(find /mnt -maxdepth 1 -mindepth 1))
   if [[ ${#MOUNTED_DISKS[@]} -eq 0 ]]; then
     MOUNTED_DISKS=('')
   fi
 
-  set -x
   # Location of HDFS data blocks on datanodes; for each mounted disk, add the
   # path /mnt/diskname/hadoop/dfs/data as a data directory, or if no mounted
   # disks exist, just go with the absolute path /hadoop/dfs/data.
   HDFS_DATA_DIRS="${MOUNTED_DISKS[@]/%//hadoop/dfs/data}"
-  
+
   # Do not create HDFS_NAME_DIR, or Hadoop will think it is already formatted
   mkdir -p /hadoop/dfs ${HDFS_DATA_DIRS}
 
@@ -62,7 +60,7 @@ HADOOP_SECONDARYNAMENODE_OPTS="-Xmx${SECONDARYNAMENODE_MEM_MB}m \${HADOOP_SECOND
 EOF
 
   # Increase maximum number of files for HDFS
-  MAX_FILES=65535
+  MAX_FILES=16384
   ulimit -n ${MAX_FILES}
   cat << EOF > /etc/security/limits.d/hadoop.conf
 ${HDFS_ADMIN} hard nofile ${MAX_FILES}
@@ -78,5 +76,3 @@ EOF
       --create_if_absent \
       --clobber
 fi
-
-  set +x
