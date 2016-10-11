@@ -15,20 +15,16 @@
 # have executed Confidentiality and Non-disclosure agreements explicitly
 # covering such access.
 
+DEBUG_FLAG=1
 echo "Running $0"
 [ -z $VM_PREFIX ] && echo "needs -n or --name" && exit -1
-[ ! -e  ./utils/cloud/gcp/common/common.sh ] && echo "Can not find common.sh! Exit -1" && exit -1
-#set +x; 
-source ./utils/cloud/gcp/jenkins/.jenkins.conf
-source ./utils/cloud/gcp/common/common.sh
-#((DEBUG_FLAG)) && set -x
+[ ! -e  ./levyx/common.sh ] && echo "Can not find common.sh! Exit -1" && exit -1
+source ./levyx/common.sh
+((DEBUG_FLAG)) && set -x
 
 load_env
 show_gcloud_instances "Exisitng instances"
-checkout_bdutil
 generate_bdutil_config
 run_bdutil_delete
 show_gcloud_instances "Remaining instances!"
-((CLI_CLEANUP_FLG)) && clean_up
 delete_env_files
-echo "Finished running $0"

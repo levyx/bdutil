@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# 00_Build_Cluster
+# DB_Cluster
 #
 # Copyright (C) 2013-2015, Levyx, Inc.
 #
@@ -16,17 +16,17 @@
 # covering such access.
 #
 
-echo "Running $0"
+DEBUG_FLAG=1
 [ -z $VM_PREFIX ] && echo "needs -n or --name" && exit -1
 [ ! -e  ./levyx/common.sh ] && echo "Can not find common.sh! Exit -1" && exit -1
 set +x; source ./levyx/common.sh; ((DEBUG_FLAG)) && set -x
 show_gcloud_instances "Pre deployment instances"
+
 verify_env_file
 verify_input
 save_env
 upload_env
 
-checkout_bdutil
 generate_bdutil_config
 run_bdutil_create
 show_gcloud_instances "Post building VMs"
@@ -42,5 +42,5 @@ reset_cluster
 sudo_cluster $RESIZE_FS
 
 ((CLI_CLEANUP_FLG)) && clean_up
-show_gcloud_instances "Afrer modifying the boot disk size!"
+show_gcloud_instances "Afrer final modifications!"
 echo "Finished running $0"
