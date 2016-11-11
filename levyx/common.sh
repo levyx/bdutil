@@ -93,19 +93,13 @@ function save_env() {
   PREEMPTIBLE_VAL=$PREEMPTIBLE_VAL
 
   MASTER_MACHINE_TYPE=$MASTER_MACHINE_TYPE
-  MASTER_BOOT_DISK_SIZE=$MASTER_BOOT_DISK_SIZE
-  MASTER_SSD_COUNT=$MASTER_SSD_COUNT
  
   WORKER_MACHINE_TYPE=$WORKER_MACHINE_TYPE
-  WORKER_BOOT_DISK_SIZE=$WORKER_BOOT_DISK_SIZE
-  WORKER_SSD_COUNT=$WORKER_SSD_COUNT
-
-  ATTACHED_PD_TYPE=$ATTACHED_PD_TYPE
+  BOOT_DISK_SIZE=$BOOT_DISK_SIZE
+  LOCAL_SSD_COUNT=$LOCAL_SSD_COUNT
   PDSIZE=$PDSIZE
-  DG_SCALE=$DG_SCALE
 
   PUBLISH_PATH=$PUBLISH_PATH
-
   DEPLOY_LS_GIT_BRANCH=$LS_GIT_BRANCH
   DEPLOY_BD_GIT_BRANCH=$BD_GIT_BRANCH
   DEPLOY_DG_SCALE=$DG_SCALE
@@ -117,8 +111,8 @@ verify_input() {
   MASTER_CPU=${MASTER_MACHINE_TYPE##*-*-}
   WORKER_CPU=${WORKER_MACHINE_TYPE##*-*-}
 
-  total_attached_disk_size=$(( ($NUM_NODES + 1) * (PDSIZE * WORKER_PD_COUNT) ))
-  total_num_cpu=$(( $NUM_NODES * $WORKER_CPU + $MASTER_CPU ))
+#  total_attached_disk_size=$(( ($NUM_NODES + 1) * (PDSIZE * WORKER_PD_COUNT) ))
+#  total_num_cpu=$(( $NUM_NODES * $WORKER_CPU + $MASTER_CPU ))
 #  data_total_size=$(( 22 * ${DG_SCALE} / 10 ))
 #  echo "total_attached_disk_size = $total_attached_disk_size versus data_total_size=$data_total_size"
 #  echo "total_num_cpu = $total_num_cpu"
@@ -164,20 +158,19 @@ generate_bdutil_config() {
   [[ "$DEBUG" == "true" ]] &&  GENERAL_OPTIONS+=" -D "
 
   GENERAL_OPTIONS+=" -f -i $BASE_IMAGE -b $BUCKET -P $VM_PREFIX -n $NUM_NODES -z $ZONE"
+  ATTACHED_PD_TYPE="pd-ssd" 
+  if [[ "${PDSIZE}" != "0" ]]
+  then
+    PD_DISK_OPTIONS=" -d"
+    PD_DISK_OPTIONS+=" --master_attached_pd_type $ATTACHED_PD_TYPE --master_attached_pd_size_gb $PDSIZE"
+    PD_DISK_OPTIONS+=" --worker_attached_pds_type $ATTACHED_PD_TYPE --worker_attached_pds_size_gb $PDSIZE"
+  fi
 
-#  if [[ "${ATTACHED_PD_TYPE}" != "NONE" ]]
-#  then
-#    PD_COUNT=1
-#    PD_DISK_OPTIONS=" -d"
-  #  PD_DISK_OPTIONS+=" --master_attached_pd_type $ATTACHED_PD_TYPE --master_attached_pd_size_gb $PDSIZE"
-  #  PD_DISK_OPTIONS+=" --worker_attached_pds_type $ATTACHED_PD_TYPE --worker_attached_pds_size_gb $PDSIZE"
-#  fi
+  MASTER_OPTIONS=" -M $MASTER_MACHINE_TYPE --master_boot_disk_size_gb $BOOT_DISK_SIZE"
+  MASTER_OPTIONS+=" --master_local_ssd_count $LOCAL_SSD_COUNT"
 
-  MASTER_OPTIONS=" -M $MASTER_MACHINE_TYPE --master_boot_disk_size_gb $MASTER_BOOT_DISK_SIZE"
-  MASTER_OPTIONS+=" --master_local_ssd_count $MASTER_SSD_COUNT"
-
-  WORKER_OPTIONS=" -m $WORKER_MACHINE_TYPE --worker_boot_disk_size_gb $WORKER_BOOT_DISK_SIZE"
-  WORKER_OPTIONS+=" --worker_local_ssd_count $WORKER_SSD_COUNT"
+  WORKER_OPTIONS=" -m $WORKER_MACHINE_TYPE --worker_boot_disk_size_gb $BOOT_DISK_SIZE"
+  WORKER_OPTIONS+=" --worker_local_ssd_count $LOCAL_SSD_COUNT"
 
   HADOOP_OPTIONS="-F hdfs -e hadoop2_env.sh -e ./extensions/levyx/levyx_env.sh"
 
