@@ -15,6 +15,7 @@
 # Mounts any attached persistent and ephemeral disks non-boot disks
 
 set -e
+set -x 
 
 # Get a list of disks from the metadata server.
 BASE_DISK_URL='http://metadata.google.internal/computeMetadata/v1/instance/disks/'
@@ -33,6 +34,7 @@ for DISK_PATH in ${DISK_PATHS}; do
     continue
   fi
 
+  
   if [[ "${DISK_TYPE}" == 'EPHEMERAL' ]]; then
     DISK_PREFIX='ed'
   elif [[ "${DISK_TYPE}" == 'PERSISTENT' ]]; then
@@ -74,3 +76,4 @@ if (( ${#MOUNTED_DISKS[@]} )); then
     ln -s ${MOUNTED_HADOOP_DIR} /hadoop
   fi
 fi
+
