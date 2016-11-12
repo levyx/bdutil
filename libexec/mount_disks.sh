@@ -35,7 +35,7 @@ for DISK_PATH in ${DISK_PATHS}; do
   fi
 
   
-  if [[ "${DISK_TYPE}" == 'EPHEMERAL' ]]; then
+  if [[ "${DISK_TYPE}" == 'LOCAL-SSD' ]]; then
     DISK_PREFIX='ed'
   elif [[ "${DISK_TYPE}" == 'PERSISTENT' ]]; then
     DISK_PREFIX='pd'
