@@ -69,7 +69,7 @@ systemctl restart sshd
 #gsutil cp gs://levyx-share/sbt-0.13.0.rpm .
 #yum install -y ./sbt-0.13.0.rpm
 wget http://dl.bintray.com/sbt/rpm/sbt-0.13.5.rpm
-sudo yum install sbt-0.13.5.rpm 
+sudo yum install -y sbt-0.13.5.rpm 
 
 # Install scala
 gsutil cp gs://levyx-share/scala-2.11.2.tgz .
