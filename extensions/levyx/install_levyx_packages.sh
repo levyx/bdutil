@@ -144,6 +144,6 @@ make
 sudo make install
 popd
 
-wget http://d3kbcqa49mib13.cloudfront.net/spark-1.6.1-bin-hadoop2.4.tgz
+wget -q http://d3kbcqa49mib13.cloudfront.net/spark-1.6.1-bin-hadoop2.4.tgz
 tar xzvf spark-1.6.1-bin-hadoop2.4.tgz
 chown -R hadoop:hadoop *
