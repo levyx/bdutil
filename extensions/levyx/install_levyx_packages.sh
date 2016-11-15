@@ -134,14 +134,11 @@ for DISK_PATH in ${DISK_PATHS}; do
   fi
 done
 
-wget http://apache.spinellicreations.com/zookeeper/zookeeper-3.4.9/zookeeper-3.4.9.tar.gz
-tar xzvf zookeeper-3.4.9.tar.gz
-pushd zookeeper-3.4.9/src/c
-./configure
-make 
-make install
-popd
-
-wget http://d3kbcqa49mib13.cloudfront.net/spark-1.6.1-bin-hadoop2.4.tgz
-tar xzvf spark-1.6.1-bin-hadoop2.4.tgz
-pushd spark-1.6.1-bin-hadoop2.4
+# If disks are mounted use the first one to hold target of symlink /hadoop
+#if (( ${#MOUNTED_DISKS[@]} )); then
+#  MOUNTED_HADOOP_DIR=${MOUNTED_DISKS[0]}/hadoop
+#  mkdir -p ${MOUNTED_HADOOP_DIR}
+#  if [[ ! -d /hadoop ]]; then
+#    ln -s ${MOUNTED_HADOOP_DIR} /hadoop
+#  fi
+#fi
