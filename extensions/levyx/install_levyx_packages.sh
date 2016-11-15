@@ -139,7 +139,7 @@ done
 wget http://apache.spinellicreations.com/zookeeper/zookeeper-3.4.9/zookeeper-3.4.9.tar.gz
 tar xzvf zookeeper-3.4.9.tar.gz
 pushd zookeeper-3.4.9/src/c
-./configure
+./configure prefix=/
 make 
 make install
 popd
