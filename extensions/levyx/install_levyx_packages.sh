@@ -68,7 +68,7 @@ systemctl restart sshd
 # Install sbt
 #gsutil cp gs://levyx-share/sbt-0.13.0.rpm .
 #yum install -y ./sbt-0.13.0.rpm
-wget http://dl.bintray.com/sbt/rpm/sbt-0.13.5.rpm
+wget -q http://dl.bintray.com/sbt/rpm/sbt-0.13.5.rpm
 sudo yum install -y sbt-0.13.5.rpm 
 
 # Install scala
@@ -136,12 +136,12 @@ for DISK_PATH in ${DISK_PATHS}; do
   fi
 done
 
-wget http://apache.spinellicreations.com/zookeeper/zookeeper-3.4.9/zookeeper-3.4.9.tar.gz
+wget -q http://apache.spinellicreations.com/zookeeper/zookeeper-3.4.9/zookeeper-3.4.9.tar.gz
 tar xzvf zookeeper-3.4.9.tar.gz
 pushd zookeeper-3.4.9/src/c
 ./configure prefix=/
 make 
-make install
+sudo make install
 popd
 
 wget http://d3kbcqa49mib13.cloudfront.net/spark-1.6.1-bin-hadoop2.4.tgz
