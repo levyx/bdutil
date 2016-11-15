@@ -144,4 +144,3 @@ popd
 
 wget http://d3kbcqa49mib13.cloudfront.net/spark-1.6.1-bin-hadoop2.4.tgz
 tar xzvf spark-1.6.1-bin-hadoop2.4.tgz
-pushd spark-1.6.1-bin-hadoop2.4
