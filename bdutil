@@ -521,12 +521,12 @@ function run_sanity_checks() {
   fi
 
   # Enforce maximum local-ssds per VM.
-  if (( ${WORKER_LOCAL_SSD_COUNT} > 4 )); then
-    logerror 'WORKER_LOCAL_SSD_COUNT can be a maximum of 4.'
+  if (( ${WORKER_LOCAL_SSD_COUNT} > 8 )); then
+    logerror 'WORKER_LOCAL_SSD_COUNT can be a maximum of 8.'
     print_help
   fi
-  if (( ${MASTER_LOCAL_SSD_COUNT} > 4 )); then
-    logerror 'MASTER_LOCAL_SSD_COUNT can be a maximum of 4.'
+  if (( ${MASTER_LOCAL_SSD_COUNT} > 8 )); then
+    logerror 'MASTER_LOCAL_SSD_COUNT can be a maximum of 8.'
     print_help
   fi
 
